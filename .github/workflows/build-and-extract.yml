@@ -72,24 +72,6 @@ jobs:
           fi
         done
 
-    - name: Move multiple packages to smali_classes2
-      run: |
-        packages=(
-          "com/brianml31/app"
-          "com/brianml31/insta_moon"
-        )
-        for pkg in "${packages[@]}"; do
-          SRC="InstaMoon_decompiled/smali/$pkg"
-          DEST="InstaMoon_decompiled/smali_classes2/$pkg"
-          echo "Moving $SRC → $DEST"
-          if [ -d "$SRC" ]; then
-            mkdir -p "$DEST"
-            mv "$SRC"/* "$DEST"/
-            rmdir "$SRC" 2>/dev/null || true
-          else
-            echo "❌ Source $SRC does not exist."
-          fi
-        done
 
     - name: Recompile APK with apktool
       run: |
@@ -97,14 +79,14 @@ jobs:
 
     - name: Extract classes.dex and classes2.dex files from recompiled APK
       run: |
-        unzip -o InstaMoon_recompiled.apk classes.dex classes2.dex -d extracted_dex
+        unzip -o InstaMoon_recompiled.apk classes.dex -d extracted_dex
 
     - name: Copy files to temporary folder
       run: |
         mkdir upload
         cp app/build/outputs/apk/release/app-release-unsigned.apk upload/
         cp extracted_dex/classes.dex upload/
-        cp extracted_dex/classes2.dex upload/
+        
 
     - name: Upload files without folders
       uses: actions/upload-artifact@v4
