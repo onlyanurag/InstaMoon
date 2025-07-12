@@ -26,32 +26,9 @@ jobs:
 
     - name: Build unsigned APK
       run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease
-          
-    - name: Decode keystore
-      run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+        chmod +x gradlew
+        ./gradlew assembleRelease
 
-    - name: Sign APK with apksigner
-      run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*-release-unsigned.apk" | head -n 1)
-          SIGNED_APK_PATH="app/build/outputs/apk/release/app-release-signed.apk"
-
-          $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
-            --ks keystore.jks \
-            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-            --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
-            --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
-            --out "$SIGNED_APK_PATH" \
-            "$APK_PATH"
-            
-    #- name: Upload signed APK
-    #  uses: actions/upload-artifact@v4
-    #  with:
-    #      name: Signed APK
-    #      path: app/build/outputs/apk/release/app-release-signed.apk
-          
     - name: Install apktool
       run: |
         mkdir -p $HOME/apktool
@@ -59,11 +36,11 @@ jobs:
         echo -e '#!/bin/bash\njava -jar $HOME/apktool/apktool.jar "$@"' > $HOME/apktool/apktool
         chmod +x $HOME/apktool/apktool
         echo "$HOME/apktool" >> $GITHUB_PATH
-        
-    - name: Decompile signed apk
+
+    - name: Decompile unsigned APK
       run: |
-        apktool d app/build/outputs/apk/release/app-release-signed.apk -o InstaMoon_decompiled
-        
+        apktool d app/build/outputs/apk/release/app-release-unsigned.apk -o InstaMoon_decompiled
+
     - name: Clean all smali* folders
       run: |
         for dir in InstaMoon_decompiled/smali*; do
@@ -84,7 +61,7 @@ jobs:
             find "$dir/com/brianml31/mainactivity" -type f -name "MainActivity*.smali" -delete
           fi
         done
-        
+
     - name: Unify smali into a single folder
       run: |
         for dir in InstaMoon_decompiled/smali_classes*; do
@@ -94,20 +71,17 @@ jobs:
             rm -rf "$dir"
           fi
         done
-        
+
     - name: Move multiple packages to smali_classes2
       run: |
         packages=(
           "com/brianml31/app"
           "com/brianml31/insta_moon"
         )
-    
         for pkg in "${packages[@]}"; do
           SRC="InstaMoon_decompiled/smali/$pkg"
           DEST="InstaMoon_decompiled/smali_classes2/$pkg"
-    
           echo "Moving $SRC → $DEST"
-    
           if [ -d "$SRC" ]; then
             mkdir -p "$DEST"
             mv "$SRC"/* "$DEST"/
@@ -120,21 +94,15 @@ jobs:
     - name: Recompile APK with apktool
       run: |
         apktool b InstaMoon_decompiled -o InstaMoon_recompiled.apk
-        
+
     - name: Extract classes.dex and classes2.dex files from recompiled APK
       run: |
         unzip -o InstaMoon_recompiled.apk classes.dex classes2.dex -d extracted_dex
-        
-    #- name: Subir archivo DEX extraído
-    #  uses: actions/upload-artifact@v4
-    #  with:
-    #    name: Recompiled DEX
-    #    path: extracted_dex/classes.dex
-        
+
     - name: Copy files to temporary folder
       run: |
         mkdir upload
-        cp app/build/outputs/apk/release/app-release-signed.apk upload/
+        cp app/build/outputs/apk/release/app-release-unsigned.apk upload/
         cp extracted_dex/classes.dex upload/
         cp extracted_dex/classes2.dex upload/
 
