@@ -52,7 +52,7 @@ jobs:
     #      name: Signed APK
     #      path: app/build/outputs/apk/release/app-release-signed.apk
           
-    - name: Install apktool
+     - name: Install apktool
       run: |
         mkdir -p $HOME/apktool
         wget https://github.com/iBotPeaches/Apktool/releases/download/v2.11.1/apktool_2.11.1.jar -O $HOME/apktool/apktool.jar
